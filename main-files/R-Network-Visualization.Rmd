@@ -1,0 +1,417 @@
+---
+title: "R-Network-Data-Visualization"
+author: "Hoai Do"
+date: "11/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Libraries check: The following code will check whether the required packages have been installed. If not, it will automatically install them from CRAN.
+```{r, warning = FALSE, message = FALSE}
+pkgs <- c(
+  "igraph",
+  "ggraph",
+  "tidygraph",
+  "networkD3",
+  "heatmaply",
+  "dendextend",
+  "circlize"
+)
+
+missing_pkgs <- pkgs[!(pkgs %in% installed.packages()[, "Package"])]
+
+if (length(missing_pkgs) > 0) {
+  install.packages(missing_pkgs)
+}
+```
+
+### I. Social Network and 2D visulization
+I am going to use the book Pride and Prejudices where each node is a main character in the book and each edge represents the co-occurrence of two characters in the same sentence. As this network represents the relationships among a group of people, it is a prefect example of social network.
+```{r,warning = FALSE, message = FALSE}
+pri_pre <- readRDS(file = "book_cooc.RDS")
+pri_pre[1:5,1:5]
+```
+
+```{r,warning = FALSE, message = FALSE}
+library(igraph)
+pp_Network <- graph_from_adjacency_matrix(pri_pre,mode = "undirected", diag = FALSE)
+plot(pp_Network)
+```
+
+I am going to ggrapg for fine tuned visualization
+```{r,warning = FALSE, message = FALSE}
+library(ggraph)
+ggraph(pp_Network, layout="fr") + 
+  geom_edge_link(edge_colour="black", edge_alpha=0.2) +
+  geom_node_point( color="#00bfff", size=3) +
+  #scale_edge_width(range=c(1,3)) +
+  geom_node_text( aes(label=name), repel = TRUE, size=4, color="#2243b6") +
+  theme(
+    legend.position="none",
+    plot.margin=unit(rep(1,4), "cm")
+  )
+```
+
+#### I.1 Different Layouts
+The layout of a network refers to the way how do we present the network, eg, how do we decide the location of nodes and the distance between them?
+
+We will use the Highschool dataset included in the package ggraph. The dataset shows the change of friendship among a group of high school students from 1957 to 1958. The dataset is stores as edge list as follow:
+
+##### Layout igraph randomly
+```{r,warning = FALSE, message = FALSE}
+ggraph(highschool,layout="igraph",algorithm="randomly") + 
+  geom_edge_link(edge_colour="black",edge_alpha=0.2) +
+  geom_node_point(color="#00bfff",size=3) +
+  #scale_edge_width(range=c(1,3)) +
+  #geom_node_text( aes(label=name), repel = TRUE, size=3, color="#69b3a2") +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(rep(1,4), "cm")
+  )+
+ facet_wrap(~year,ncol=2)
+```
+
+##### Layout Fruchterman-Reingold
+The layout Fruchterman-Reingold is a force-directed layout algorithm. The idea of a force directed layout algorithm is to consider a force between any two nodes. In this algorithm, the nodes are represented by steel rings and the edges are springs between them. The attractive force is analogous to the spring force and the repulsive force is analogous to the electrical force. The basic idea is to minimize the energy of the system by moving the nodes and changing the forces between them. This layout is usually useful for visualizing very large undirected networks.
+
+```{r,warning = FALSE, message = FALSE}
+ggraph(highschool,layout="fr") + 
+  geom_edge_link(edge_colour="black",edge_alpha=0.2) +
+  geom_node_point(color="#00bfff",size=3) +
+  #scale_edge_width(range=c(1,3)) +
+  #geom_node_text( aes(label=name), repel = TRUE, size=3, color="#69b3a2") +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(rep(1,4), "cm")
+  )+
+ facet_wrap(~year,ncol=2)
+```
+
+##### Layout Kamada Kawai
+Kamanda Kawai force based algorithm that performs very well for connected graphs, but it gives poor results for unconnected ones.
+
+```{r,warning = FALSE, message = FALSE}
+ggraph(highschool,layout="kk") + 
+  geom_edge_link(edge_colour="black",edge_alpha=0.2) +
+  geom_node_point(color="#00bfff",size=3) +
+  #scale_edge_width(range=c(1,3)) +
+  #geom_node_text( aes(label=name), repel = TRUE, size=3, color="#69b3a2") +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(rep(1,4), "cm")
+  )+
+ facet_wrap(~year,ncol=2)
+```
+
+##### Layout Drl
+DrL is a force-directed graph layout toolbox focused on real-world large-scale graphs, developed by Shawn Martin and colleagues at Sandia National Laboratories.
+```{r,warning = FALSE, message = FALSE}
+ggraph(highschool,layout="drl") + 
+  geom_edge_link(edge_colour="black",edge_alpha=0.2) +
+  geom_node_point(color="#00bfff",size=3) +
+  #scale_edge_width(range=c(1,3)) +
+  #geom_node_text( aes(label=name), repel = TRUE, size=3, color="#69b3a2") +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(rep(1,4), "cm")
+  )+
+ facet_wrap(~year,ncol=2)
+```
+
+###### Layout Sphere
+This approach of layout places the vertices (approximately) uniformly on the surface of a sphere, this is thus a 3D layout. The location of each student is relatively fixed so that we can compare easily between two years which is the benefit of using Sphere Layout.
+```{r,warning = FALSE, message = FALSE}
+ggraph(highschool,layout="sphere") + 
+  geom_edge_link(edge_colour="black",edge_alpha=0.2) +
+  geom_node_point(color="#00bfff",size=3) +
+  #scale_edge_width(range=c(1,3)) +
+  #geom_node_text( aes(label=name), repel = TRUE, size=3, color="#69b3a2") +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(rep(1,4), "cm")
+  )+
+ facet_wrap(~year,ncol=2)
+```
+
+###### Combined plot
+Or we can directly plot those two network in one plot as the nodes are the same. And this time, we will plt four layouts and try to decide which one make more sense by just comparing them.
+
+Although there is no such thing as “the best layout algorithm” since algorithms have been optimized for different scenarios. Experiment with them and choose the one that is “salty” is sometime helpful!
+
+```{r,warning = FALSE, message = FALSE}
+library(tidygraph)
+graph <- as_tbl_graph(highschool) %>% 
+  mutate(degree = centrality_degree())
+lapply(c('stress', 'fr', 'lgl', 'graphopt'), function(layout) {
+  ggraph(graph, layout = layout) + 
+    geom_edge_link(aes(colour = factor(year)), show.legend = FALSE) +
+    geom_node_point() + 
+    labs(caption = paste0('Layout: ', layout))
+})
+```
+
+### II. Dependecy Network 
+In the above examples, nodes are of the same type all the time. However, network can be constructed in many ways! For example, we can build a network to represent the dependecy between different level of nodes. This is very similar to a cluter data.
+
+In this section, we going to use a dataset describing the structure of coures which are the Master of Statistics Programs (Mathematical Statistics, Economic Statistics, and Epidemiology and Health Statistics) of a college. We could visualize this network as an iterative network so that the clutering pattern is highlighted if you hover on the program node. At the same time, the overlapping course between programs are also clear.
+```{r,warning = FALSE, message = FALSE}
+library(networkD3)
+course<-read.csv("course.csv", stringsAsFactors = FALSE)
+
+simpleNetwork(course,     
+        Source=1,      # column number of source
+        Target=2,       # column number of target
+        height=880,      # height of frame area in pixels
+        width=1000,
+        linkDistance=70,   # distance between node. Increase this value to have more space between nodes
+        charge=-30,              # numeric value indicating either the strength of the node repulsion (negative value) or attraction (positive value)
+        fontSize=8,               # size of the node names
+        fontFamily="serif",       # font og node names
+        linkColour="#abcdef",        # colour of edges, MUST be a common colour for the whole graph
+        nodeColour="#00bfff",     # colour of nodes, MUST be a common colour for the whole graph
+        opacity=0.9,              # opacity of nodes. 0=transparent. 1=no transparency
+        zoom=T                    # Can you zoom on the figure?
+)
+```
+
+```{r,warning = FALSE, message = FALSE}
+# make a nodes data frame out of all unique nodes
+nodes <- data.frame(name = unique(c(course$from, course$to)))
+
+# make a group variable where nodes in course$from are identified
+nodes$group <- nodes$name %in% course$from
+
+links <- data.frame(source = match(course$from, nodes$name) - 1,
+                    target = match(course$to, nodes$name) - 1)
+forceNetwork(Links = links,
+             Nodes = nodes,
+             Source = "source",
+             Target = "target", 
+             NodeID ="name", 
+             Group = "group",
+             opacity = 1, 
+             opacityNoHover = 1,
+             linkDistance=70,
+             fontSize=8,
+             fontFamily="serif",
+             zoom=T)
+```
+
+### III. Edge Bundling
+Edge Bundling allows to visualize adjacency relations between entities organized in a hierarchy. The idea is to bundle the adjacency edges together to decrease the clutter usually observed in complex networks.
+
+#### Edge Bundling 
+```{r,warning = FALSE, message = FALSE}
+library(dendextend)
+book_cluster <- readRDS(file = "book_cluster.RDS")
+den_hc <- as.dendrogram(book_cluster)
+```
+```{r,warning = FALSE, message = FALSE}
+book_edge = as_edgelist(pp_Network)
+# The connection object must refer to the ids of the leaves:
+from=match(book_edge[,1],get_nodes_attr(den_hc,"label"))
+to=match(book_edge[,2],get_nodes_attr(den_hc,"label"))
+
+# Make the plot
+ggraph(den_hc,layout='dendrogram',circular=TRUE)+ 
+  geom_edge_link(alpha=0.2) +
+  geom_conn_bundle(data=get_con(from=from,to=to),alpha= 0.8, colour="#00bfff") + 
+  geom_node_text(aes(x = x, y=y, filter = leaf, label=label), size=3, alpha=1) +
+  coord_fixed() +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(c(0,0,0,0),"cm"),
+  ) +
+  expand_limits(x = c(-1.2, 1.2), y = c(-1.2, 1.2))
+```
+
+#### Edge Bundling - Flare dataset
+This dataset contains the graph that describes the class hierarchy for the Flare ActionScript visualization library. It contains both the class hierarchy as well as the import connections between classes. 
+```{r,warning = FALSE, message = FALSE}
+edges <- flare$edges
+head(edges)
+vertices=flare$vertices %>%
+  arrange(name) %>%
+  mutate(name=factor(name,name))
+head(vertices)
+```
+```{r,warning = FALSE, message = FALSE}
+#Preparation to draw labels properly:
+vertices$id=NA
+myleaves=which(is.na(match(vertices$name,edges$from)))
+nleaves=length(myleaves)
+
+vertices$id[myleaves]=seq(1:nleaves)
+vertices$angle=90-360*vertices$id/nleaves
+vertices$hjust=ifelse(vertices$angle < -90, 1,0)
+vertices$angle=ifelse(vertices$angle < -90,vertices$angle+180,vertices$angle)
+head(vertices)
+```
+```{r,warning = FALSE, message = FALSE}
+# Build a network object from this dataset:
+flaire_EB <- graph_from_data_frame(edges,vertices=vertices)
+```
+```{r, warning = FALSE, message = FALSE}
+# Basic dendrogram
+ggraph(flaire_EB,layout='dendrogram',circular=TRUE)+ 
+    geom_edge_link(size=0.4,alpha=0.1)+
+    geom_node_text(aes(x=x*1.01,y=y*1.01,filter=leaf,label=shortName,angle=angle-90,hjust=hjust),size=1.5,alpha=0.5) +
+    coord_fixed() +
+    theme_void() +
+    theme(
+      legend.position="none",
+      plot.margin=unit(c(0,0,0,0),"cm"),
+    ) +
+    expand_limits(x=c(-1.2, 1.2),y=c(-1.2, 1.2))
+```
+Now we try to embed the edge bundling into the dendrogram
+```{r,warning = FALSE, message = FALSE}
+connections <- flare$imports
+# The connection object must refer to the ids of the leaves:
+from <- match(connections$from,vertices$name)
+to <- match(connections$to,vertices$name)
+
+# Make the plot
+ggraph(flaire_EB,layout='dendrogram',circular=TRUE)+ 
+    geom_conn_bundle(data=get_con(from=from,to=to),alpha= 0.1, colour="#00bfff") + 
+    geom_node_text(aes(x=x*1.01,y=y*1.01,filter=leaf,label=shortName,angle = angle-90,hjust=hjust),size=1.5,alpha=1) +
+    coord_fixed()+
+    theme_void()+
+    theme(
+      legend.position="none",
+      plot.margin=unit(c(0,0,0,0),"cm"),
+    ) +
+    expand_limits(x = c(-1.2, 1.2), y = c(-1.2, 1.2))
+```
+
+### IV. Hive Diagram
+An extension to the well-known arc diagrams is the hive plot, where instead of the nodes being laid out along a single one-dimensional axis they are laid out along multiple axes. This can help reveal more complex clusters (if the nodes represent connected people, imagine for example laying out nodes along axes of both “income” and “enthicity”).
+```{r,warning = FALSE, message = FALSE}
+graph <- as_tbl_graph(pp_Network) %>% 
+  mutate(degree = centrality_degree())
+age=c("old","young","young","young","young",
+          "old","kid","kid","young","young","young",
+          "young","old","young","young","old","old")
+ggraph(graph, 'hive', axis = age) + 
+  geom_edge_hive(colour = 12,label_colour = 2) + 
+  geom_axis_hive(aes(colour = age), size = 2, label = FALSE) + 
+  geom_node_label(aes(label=name),repel=F, size=2.5) + 
+  coord_fixed()
+```
+
+Or we can try this style with the `highschool` dataset
+```{r,warning = FALSE, message = FALSE}
+highschool_graph <- as_tbl_graph(highschool) %>% 
+  mutate(degree = centrality_degree())
+
+highschool_graph <- highschool_graph %>% 
+  mutate(friends = ifelse(
+    centrality_degree(mode = 'in') < 5, 'few',
+    ifelse(centrality_degree(mode = 'in') >= 15, 'many', 'medium')
+  ))
+ggraph(highschool_graph, 'hive', axis = friends, sort.by = degree) + 
+  geom_edge_hive(aes(colour = factor(year))) + 
+  geom_axis_hive(aes(colour = friends), size = 2, label = FALSE) + 
+  coord_fixed()
+```
+
+### V. Flow diagram: Sankey Diagram and Chord Diagram
+#### Sankey Diagram
+Sankey diagrams are a type of flow diagram in which the width of the arrows is proportional to the flow rate.
+Sankey diagrams can also visualize the energy accounts, material flow accounts on a regional or national level, and cost breakdowns. Itemphasize the major transfers or flows within a system. They help locate the most important contributions to a flow. They often show conserved quantities within defined system boundaries.
+```{r, warning = FALSE, message = FALSE}
+# Load dataset from github
+gh_data <- read.table("https://raw.githubusercontent.com/holtzy/data_to_viz/master/Example_dataset/13_AdjacencyDirectedWeighted.csv", header=TRUE)
+# Package
+library(networkD3)
+library(tidyverse)
+```
+```{r}
+# we need a long format of this dataset
+data_long <- gh_data %>%
+  rownames_to_column %>%
+  gather(key = 'key', value = 'value', -rowname) %>%
+  filter(value > 0)
+colnames(data_long) <- c("source", "target", "value")
+data_long$target <- paste(data_long$target, " ", sep="")
+
+# From these flows we need to create a node data frame: it lists every entities involved in the flow
+nodes <- data.frame(name=c(as.character(data_long$source), as.character(data_long$target)) %>% unique())
+ 
+# With networkD3, connection must be provided using id, not using real name like in the links dataframe.. So we need to reformat it.
+data_long$IDsource=match(data_long$source, nodes$name)-1 
+data_long$IDtarget=match(data_long$target, nodes$name)-1
+
+# prepare colour scale
+ColourScal ='d3.scaleOrdinal() .range(["#31736e","#ffcb12","#blbca0","#abcdef","#99cccc","#03c03c","#c9acae","#eeccee","#b452cd","#ffff31"])'
+
+# Make the Network
+sankeyNetwork(Links = data_long, Nodes = nodes,
+                     Source = "IDsource", Target = "IDtarget",
+                     Value = "value", NodeID = "name", 
+                     sinksRight=FALSE, colourScale=ColourScal, nodeWidth=40, fontSize=13, nodePadding=20)
+```
+
+#### Chord Diagram
+A chord diagram is a graphical method of displaying the inter-relationships between data in a matrix. The data are arranged radially around a circle with the relationships between the data points typically drawn as arcs connecting the data.
+The format can be aesthetically pleasing, making it a popular choice in the world of data visualization.
+The primary use of chord diagrams is to show the flows or connections between several entities (called nodes). Each entity is represented by a fragment (often colored or pattered) along the circumference of the circle. Arcs are drawn between entities to show flows (and exchanges in economics). The thickness of the arc is proportional to the significance of the flow.
+
+```{r}
+# Interactivity is a real plus to make the chord diagram understandable. In the example below, you can hover a specific group to highlight all its connections.
+library(chorddiag)
+m <- matrix(c(11975,  5871, 8916, 2868,
+              1951, 10048, 2060, 6171,
+              8010, 16145, 8090, 8045,
+              1013,   990,  940, 6907),
+            byrow = TRUE,
+            nrow = 4, ncol = 4)
+haircolors <- c("black", "blonde", "brown", "red")
+dimnames(m) <- list(have = haircolors,
+                    prefer = haircolors)
+
+groupColors <- c("#ccffe6", "#ccffcc", "#99ccb3", "#e6e6fa")
+chorddiag(m, groupColors = groupColors, groupnamePadding = 20)
+```
+
+### VI. Plot via ggraph
+
+```{r}
+edge <- read.table("12edge.txt", header=T, fileEncoding="UTF-16") # load edge
+net <- graph_from_data_frame(d=edge, directed=FALSE) # create the network
+```
+```{r}
+library(igraph)
+net <- graph_from_data_frame(d=edge, directed=FALSE) # undirected
+ ggraph(net, layout='linear', circular=TRUE)+
+  geom_node_label(aes(label = name)) +
+  geom_edge_link(aes(edge_width = E(net)$weight), alpha = 0.25, colour = '377EB8') + 
+  theme_graph(background = 'white') + 
+  theme(legend.position = "none") 
+```
+```{r}
+ggraph(net, layout='linear', circular=TRUE)+
+  geom_node_label(aes(label = name)) +
+  geom_edge_arc(aes(edge_width = E(net)$weight), alpha = 0.25, colour = '377EB8') + 
+  theme_graph(background = 'white') + 
+  theme(legend.position = "none")
+```
+```{r}
+E(net)$weight <- edge$relation
+ggraph(net, layout='graphopt')+
+  geom_node_label(aes(label = name)) +
+  geom_edge_link(aes(edge_width = E(net)$weight), alpha = 0.3, colour = '377EB8') + 
+  theme_graph(background = 'white') + 
+  theme(legend.position = "none")#addjust the layout
+```
+
+
+ 
